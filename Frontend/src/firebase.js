@@ -17,15 +17,6 @@ const firebaseConfig = {
   appId: "YOUR_APP_ID",
    measurementId: "YOUR_MEASUREMENT_ID"
 };
-const firebaseConfig = {
-  apiKey: "AIzaSyAK-B9eYG4pfD7cfFg-b6QxYX6lrG4l2B0",
-  authDomain: "trustbridge-61301.firebaseapp.com",
-  projectId: "trustbridge-61301",
-  storageBucket: "trustbridge-61301.firebasestorage.app",
-  messagingSenderId: "682714931571",
-  appId: "1:682714931571:web:a944560965269120c5e506",
-  measurementId: "G-4GFKPC0H15"
-};
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
