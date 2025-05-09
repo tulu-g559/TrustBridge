@@ -25,7 +25,6 @@ firebase.js
 *.sw?
 
 # Backend
-
 .env
 firebase_config.json
 env2
