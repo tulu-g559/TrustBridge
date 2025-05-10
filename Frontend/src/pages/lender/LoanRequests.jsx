@@ -1,57 +1,87 @@
-import React, { useEffect, useState } from "react";
-import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
-import { auth, firestore } from "../../firebase";
-import { useAuthState } from "react-firebase-hooks/auth";
-import DashboardWrapper from "../../components/shared/DashboardWrapper";
-import { HandCoins, User, Timer } from "lucide-react";
-import { Button } from "../../components/ui/button";
+import React, { useEffect, useState } from "react"
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+  addDoc,
+  getDoc,
+  serverTimestamp
+} from "firebase/firestore"
+import { auth, firestore } from "../../firebase"
+import { useAuthState } from "react-firebase-hooks/auth"
+import DashboardWrapper from "../../components/shared/DashboardWrapper"
+import { HandCoins, User, Timer } from "lucide-react"
+import { Button } from "../../components/ui/button"
+import { toast } from "sonner"
 
 export default function LoanRequests() {
-  const [user] = useAuthState(auth);
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [user] = useAuthState(auth)
+  const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(true)
 
   // Fetch loan requests for current lender
   useEffect(() => {
-    if (!user) return;
+    if (!user) return
 
     const fetchRequests = async () => {
       try {
         const q = query(
           collection(firestore, "loanRequests"),
           where("lenderId", "==", user.uid)
-        );
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        setRequests(data);
+        )
+        const snapshot = await getDocs(q)
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        setRequests(data)
       } catch (error) {
-        console.error("Error fetching loan requests:", error);
+        console.error("Error fetching loan requests:", error)
+        toast.error("Failed to load loan requests.")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchRequests();
-  }, [user]);
+    fetchRequests()
+  }, [user])
 
   const updateStatus = async (id, status) => {
     try {
-      const requestRef = doc(firestore, "loanRequests", id);
-      await updateDoc(requestRef, { status });
+      const requestRef = doc(firestore, "loanRequests", id)
+      await updateDoc(requestRef, { status })
+
+      const requestSnap = await getDoc(requestRef)
+      const request = requestSnap.data()
+
+      // Add borrower notification
+      await addDoc(collection(firestore, "notifications"), {
+        userId: request.borrowerId,
+        type: "loan_status_update",
+        status,
+        message: `Your loan request has been ${status}.`,
+        requestId: id,
+        createdAt: serverTimestamp(),
+      })
+
+      toast.success(`Loan request ${status}`)
+
+      // Update local state
       setRequests((prev) =>
         prev.map((req) => (req.id === id ? { ...req, status } : req))
-      );
+      )
     } catch (error) {
-      console.error("Error updating status:", error);
+      console.error("Error updating status:", error)
+      toast.error("Failed to update loan request")
     }
-  };
+  }
 
   if (loading) {
     return (
       <DashboardWrapper>
         <div className="text-white">Loading requests...</div>
       </DashboardWrapper>
-    );
+    )
   }
 
   return (
@@ -74,13 +104,15 @@ export default function LoanRequests() {
                   <User className="w-5 h-5 text-blue-400" />
                   {req.borrowerName || "Borrower"}
                 </div>
-                <p className="text-sm text-gray-400">Reason: {req.reason}</p>
+                {req.reason && (
+                  <p className="text-sm text-gray-400">Reason: {req.reason}</p>
+                )}
                 <p className="text-sm text-gray-400">
-                  Amount: ₹{req.amount} | Interest: {req.interest}%
+                  Amount: ₹{req.amount} | Interest: {req.interestRate || 0}%
                 </p>
                 <p className="text-sm text-gray-400 flex items-center gap-1">
                   <Timer className="w-4 h-4" />
-                  Trust Score: <span className="text-green-400">{req.trustScore}</span>
+                  Trust Score: <span className="text-green-400">{req.trustScore || "N/A"}</span>
                 </p>
                 <p className="text-sm mt-1">
                   Status:{" "}
@@ -119,5 +151,5 @@ export default function LoanRequests() {
         </div>
       )}
     </DashboardWrapper>
-  );
+  )
 }
