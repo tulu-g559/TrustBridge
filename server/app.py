@@ -7,9 +7,11 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 from werkzeug.utils import secure_filename
 import base64
+from datetime import datetime, timezone, timedelta
 
 from utils.loan_utils import calculate_total_due, check_and_release_documents
-from datetime import datetime, timezone, timedelta
+from utils.lender_logic import register_lender, post_lender_offer, get_lender_offers, fetch_all_borrowers
+
 
 # Load environment variables from .env
 load_dotenv()
@@ -21,7 +23,13 @@ db = firestore.client()
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:5173"],  # Add your frontend URL
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Gemini API setup
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -36,7 +44,6 @@ def verify_token(token):
     except Exception as e:
         print("Token verification failed:", e)
         return None
-
 
 
 
@@ -122,7 +129,8 @@ def user_loans(uid):
     return jsonify(loan_list), 200
 
 
-######## particular Loan Status ##########
+######## particular Loan Status 
+
 @app.route("/loan/status/<uid>/<loan_id>", methods=["GET"])
 def loan_status(uid: str, loan_id: str):
     try:
@@ -181,7 +189,8 @@ def loan_status(uid: str, loan_id: str):
         return jsonify({"error": "Failed to fetch loan status", "details": str(e)}), 500
     
 
-####### Loan approved or rejected #######
+###Loan approved or rejected
+
 @app.route("/loan/decision/<uid>/<loan_id>", methods=["POST"])
 def loan_decision(uid, loan_id):
     try:
@@ -213,120 +222,177 @@ def loan_decision(uid, loan_id):
 
 
 
+##---- Lender Routes ----##
+
+@app.route("/lender/register", methods=["POST"])
+def lender_register():
+    data = request.get_json()
+    uid = data.get("uid")
+
+    if not uid:
+        return jsonify({"status": "error", "message": "UID is required"}), 400
+
+    result = register_lender(db, uid, data)
+    return jsonify(result), 200 if result["status"] == "success" else 500
+
+# Post a lender offer
+@app.route("/lender/offer", methods=["POST"])
+def lender_offer():
+    data = request.get_json()
+    uid = data.get("uid")
+    offer_data = {
+        "amount": data.get("amount"),
+        "interest_rate": data.get("interest_rate"),
+        "timestamp": firestore.SERVER_TIMESTAMP,
+        "wallet": data.get("wallet")
+    }
+
+    result = post_lender_offer(db, uid, offer_data)
+    status = 200 if result["status"] == "success" else 500
+    return jsonify(result), status
 
 
-#######Upload docs############
-@app.route("/vision/upload", methods=["POST"])  
+# Get all offers from a lender
+@app.route("/lender/offers/<uid>", methods=["GET"])
+def lender_offers(uid):
+    result = get_lender_offers(db, uid)
+    if "status" in result and result["status"] == "error":
+        return jsonify(result), 500
+    return jsonify(result), 200
+
+
+@app.route("/lender/borrowers", methods=["GET"])
+def get_borrowers_for_lender():
+    try:
+        borrowers = fetch_all_borrowers(db)
+        return jsonify(borrowers), 200
+    except Exception as e:
+        print(f"Error fetching borrowers: {str(e)}")
+        return jsonify({"error": "Failed to fetch borrowers", "details": str(e)}), 500
+
+
+
+
+
+
+
+
+
+##------ Upload Docs & get TrustScore-------##
+
+
+@app.route("/vision/first-trustscore", methods=["POST"])  
+
 def vision_upload():
     try:
-        file = request.files.get("document")
-        if not file:
-            return jsonify({"error": "No file uploaded"}), 400
+        files = request.files.getlist("document")
+        if not files or len(files) == 0:
+            return jsonify({"error": "No files uploaded"}), 400
 
-        # Validate file type
-        allowed_types = {'image/jpeg', 'image/png', 'image/pdf'}
-        if file.mimetype not in allowed_types:
-            return jsonify({"error": "Invalid file type. Only JPEG, PNG and PDF allowed"}), 400
+        allowed_types = {'image/jpeg', 'image/png', 'application/pdf'} 
+        extracted_results = []
 
-        filename = secure_filename(file.filename)
-        file_bytes = file.read()
+        for file in files:
+            if file.mimetype not in allowed_types:
+                print(f"Skipping invalid file type: {file.filename} ({file.mimetype})")
+                continue
 
-        # Convert to base64
-        image_parts = [
-            {
-                "mime_type": file.mimetype,
-                "data": base64.b64encode(file_bytes).decode("utf-8")
-            }
-        ]
+            filename = secure_filename(file.filename)
+            file_bytes = file.read()
 
-        prompt = """
-        Extract important financial or identity details from this document.
-        Focus on:
-        - Income information
-        - Payment history
-        - Credit score
-        - Identity verification
-        Output in plain text format.
-        """
+            image_parts = [
+                {
+                    "mime_type": file.mimetype,
+                    "data": base64.b64encode(file_bytes).decode("utf-8")
+                }
+            ]
 
-        response = model.generate_content(
-            contents=[{"parts": [{"text": prompt}, {"inline_data": image_parts[0]}]}]
-        )
+            vision_prompt = """
+            Extract important financial or identity details from this document.
+            Focus specifically on:
+            - Income information (e.g., salary slips, ITR, tax documents)
+            - Payment history (e.g., utility bills like electricity, gas, rent receipts)
+            - Credit score or references to loans
+            - Identity verification (e.g., PAN, Aadhaar)
 
-        if not response.text:
-            raise ValueError("No text extracted from document")
+            Output the extracted data in clear plain text.
 
-        return jsonify({
-            "extracted_text": response.text,
-            "filename": filename
-        }), 200
-
-    except Exception as e:
-        print(f"Document processing error: {str(e)}")  # Log error
-        return jsonify({"error": "Failed to process document", "details": str(e)}), 500
+            If this is an invalid or irrelevant document (e.g., a photo, blank page, or unrelated file), return only: "Invalid document"
+            """
 
 
+            vision_response = model.generate_content(
+                contents=[{"parts": [{"text": vision_prompt}, {"inline_data": image_parts[0]}]}],
+                generation_config={"temperature": 0.0}
+            )
 
-# AI: Generate Trust Score using Gemini
-@app.route("/ai/trust-score", methods=["POST"])
-def trust_score():
-    try:
-        data = request.get_json()
-        if not data or 'history' not in data:
+            extracted_text = vision_response.text.strip() if vision_response.text else "No text extracted"
+            extracted_results.append({
+                "filename": filename,
+                "extracted_text": extracted_text
+            })
+
+        if not extracted_results:
+            return jsonify({"error": "No valid documents processed"}), 400
+
+        # Step 2: Combine extracted text for trust scoring
+        combined_history = "\n\n".join([res["extracted_text"] for res in extracted_results])
+
+        # Handle invalid or junk extracted content
+        if all("Invalid document" in res["extracted_text"] or "No text extracted" in res["extracted_text"] for res in extracted_results):
             return jsonify({
-                "error": "Missing history data in request"
-            }), 400
+                "trust_score": 5,
+                "explanation": "Submitted documents were invalid or unreadable.",
+                "results": extracted_results
+            }), 200
 
-        history_text = data.get("history")
-        if not history_text:
-            return jsonify({
-                "error": "History text cannot be empty"
-            }), 400
+        trust_prompt = f"""
+        You are evaluating a user's trustworthiness based on their submitted financial documents.
 
-        prompt = f"""
-        Based on the following user financial behavior, provide:
-        1. A trust score between 0 and 100
-        2. A brief explanation of the score
+        Instructions:
+        - If the user has provided **at least 3 valid financial documents** such as electricity bills, rent receipts, gas bills, or ITRs, then assign a trust score in the range **85 to 90**.
+        - If documents indicate mixed or limited financial reliability, assign a moderate score between 50 and 70.
+        - If the data is missing, inconsistent, or clearly invalid, assign a low score (e.g., 0 to 30).
 
-        User history: {history_text}
+        Now, based on the following extracted user document data, provide:
+        1. A trust score between 0 and 100 (integer only)
+        2. A short explanation of why this score was assigned
+        3. Aslo take it as a good point, if there is no due payment in the uploaded docs
+
+        User document data:
+        {combined_history}
 
         Response format:
         Score: [number]
         Explanation: [text]
         """
 
-        response = model.generate_content(prompt)
-        if not response or not response.text:
-            raise ValueError("Empty response from Gemini API")
 
-        text_response = response.text
-        
+        trust_response = model.generate_content(trust_prompt, generation_config={"temperature": 0.0})
+        text_response = trust_response.text if trust_response and trust_response.text else ""
+
         # Extract score using regex
         score_match = re.search(r"Score:\s*(\d{1,3})", text_response, re.IGNORECASE)
         if not score_match:
-            score = 50  # Default score if not found
+            score = 5
+            explanation = "Score could not be determined from the extracted document data."
         else:
-            score = min(100, max(0, int(score_match.group(1))))  # Ensure score is 0-100
-
-        # Extract explanation
-        explanation_match = re.search(r"Explanation:\s*(.*)", text_response, re.IGNORECASE | re.DOTALL)
-        explanation = explanation_match.group(1).strip() if explanation_match else text_response
+            score = min(100, max(0, int(score_match.group(1))))
+            explanation_match = re.search(r"Explanation:\s*(.*)", text_response, re.IGNORECASE | re.DOTALL)
+            explanation = explanation_match.group(1).strip() if explanation_match else "No explanation provided."
 
         return jsonify({
             "trust_score": score,
             "explanation": explanation,
-            "raw_response": text_response  # Helpful for debugging
+            "results": extracted_results
         }), 200
 
     except Exception as e:
-        print(f"Trust Score Error: {str(e)}")  # Log the actual error
+        print(f"Document processing error: {str(e)}")
         return jsonify({
-            "error": "AI scoring failed",
+            "error": "Failed to process and score documents",
             "details": str(e)
         }), 500
-
-
-
 
 
 
