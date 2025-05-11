@@ -88,19 +88,6 @@ export default function Profile() {
     }
   };
 
-  const maskEmail = (email) => {
-    const [name, domain] = email.split("@");
-    return `${name?.slice(0, 2)}*****@${domain}`;
-  };
-
-  const maskPhone = (phone) => {
-    return phone.replace(/^(\d{0,3})(\d{0,3})(\d{4})$/, "XXX-XXX-$3");
-  };
-
-  const maskPan = (pan) => {
-    return "XXXX" + pan.slice(-4).toUpperCase();
-  };
-
   const handleCloudinaryUpload = () => {
     if (!window.cloudinary || !user?.uid) {
       toast.error("Please log in first");
@@ -209,9 +196,9 @@ export default function Profile() {
 
         {/* Info Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-lg">
-          <LabelAndText label="Email" value={maskEmail(profileData.email)} />
-          <LabelAndText label="Phone" value={maskPhone(profileData.phone)} />
-          <LabelAndText label="PAN ID" value={maskPan(profileData.panId)} />
+          <LabelAndText label="Email" value={profileData.email} />
+          <LabelAndText label="Phone" value={profileData.phone} />
+          <LabelAndText label="PAN ID" value={profileData.panId} />
           <LabelAndText
             label="Lending Interest"
             value={profileData.lendingInterest}
