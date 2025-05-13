@@ -5,6 +5,13 @@
   text-align: center;
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  width: 100%; /* Ensure the body does not exceed the viewport width */
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;

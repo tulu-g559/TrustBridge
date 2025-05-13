@@ -3,50 +3,79 @@ import {
   collection,
   query,
   where,
-  getDocs,
-  updateDoc,
   doc,
+  updateDoc,
+  deleteDoc,
   addDoc,
+  serverTimestamp,
+  onSnapshot,
   getDoc,
-  serverTimestamp
 } from "firebase/firestore"
-import { auth, firestore } from "../../firebase"
+import { auth, db as firestore } from "../../firebase"
 import { useAuthState } from "react-firebase-hooks/auth"
 import DashboardWrapper from "../../components/shared/DashboardWrapper"
-import { HandCoins, User, Timer } from "lucide-react"
-import { Button } from "../../components/ui/button"
+import { User, Timer, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 export default function LoanRequests() {
   const [user] = useAuthState(auth)
   const [requests, setRequests] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loadingStates, setLoadingStates] = useState({})
 
-  // Fetch loan requests for current lender
   useEffect(() => {
     if (!user) return
 
-    const fetchRequests = async () => {
-      try {
-        const q = query(
-          collection(firestore, "loanRequests"),
-          where("lenderId", "==", user.uid)
-        )
-        const snapshot = await getDocs(q)
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        setRequests(data)
-      } catch (error) {
-        console.error("Error fetching loan requests:", error)
-        toast.error("Failed to load loan requests.")
-      } finally {
-        setLoading(false)
-      }
-    }
+    const q = query(
+      collection(firestore, "loanRequests"),
+      where("lenderId", "==", user.uid)
+    )
 
-    fetchRequests()
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const fetchedRequests = await Promise.all(
+        snapshot.docs.map(async (docSnap) => {
+          const data = docSnap.data()
+          const borrowerId = data.borrowerId
+
+          const borrowerName = data.borrowerName || "Borrower"
+
+          try {
+          const borrowerDoc = await getDoc(doc(firestore, "users", borrowerId))
+          const borrowerData = borrowerDoc.data()
+          const borrowerName = borrowerData?.fullName || "Anonymous"
+
+          return { 
+            id: docSnap.id, 
+            ...data, 
+            borrowerName 
+          }
+        } catch (error) {
+          console.error("Error fetching borrower details:", error)
+          return { 
+            id: docSnap.id, 
+            ...data, 
+            borrowerName: "Anonymous" 
+          }
+        }
+        })
+      )
+
+      // Sort: pending first, then approved/rejected
+      const sorted = fetchedRequests.sort((a, b) => {
+        const statusOrder = { pending: 0, approved: 1, rejected: 2 }
+        return statusOrder[a.status] - statusOrder[b.status]
+      })
+
+      setRequests(sorted)
+    })
+
+    return () => unsubscribe()
   }, [user])
 
-  const updateStatus = async (id, status) => {
+  const handleUpdate = async (id, status) => {
+    setLoadingStates((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), [status]: true }
+    }))
     try {
       const requestRef = doc(firestore, "loanRequests", id)
       await updateDoc(requestRef, { status })
@@ -54,7 +83,6 @@ export default function LoanRequests() {
       const requestSnap = await getDoc(requestRef)
       const request = requestSnap.data()
 
-      // Add borrower notification
       await addDoc(collection(firestore, "notifications"), {
         userId: request.borrowerId,
         type: "loan_status_update",
@@ -65,23 +93,26 @@ export default function LoanRequests() {
       })
 
       toast.success(`Loan request ${status}`)
-
-      // Update local state
-      setRequests((prev) =>
-        prev.map((req) => (req.id === id ? { ...req, status } : req))
-      )
     } catch (error) {
       console.error("Error updating status:", error)
       toast.error("Failed to update loan request")
+    } finally {
+      setLoadingStates((prev) => ({
+        ...prev,
+        [id]: { ...(prev[id] || {}), [status]: false }
+      }))
     }
   }
 
-  if (loading) {
-    return (
-      <DashboardWrapper>
-        <div className="text-white">Loading requests...</div>
-      </DashboardWrapper>
-    )
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this loan request?")) return
+    try {
+      await deleteDoc(doc(firestore, "loanRequests", id))
+      toast.success("Loan request deleted")
+    } catch (error) {
+      console.error("Error deleting request:", error)
+      toast.error("Failed to delete request")
+    }
   }
 
   return (
@@ -112,7 +143,10 @@ export default function LoanRequests() {
                 </p>
                 <p className="text-sm text-gray-400 flex items-center gap-1">
                   <Timer className="w-4 h-4" />
-                  Trust Score: <span className="text-green-400">{req.trustScore || "N/A"}</span>
+                  Trust Score:{" "}
+                  <span className="text-green-400">
+                    {req.trustScore || "N/A"}
+                  </span>
                 </p>
                 <p className="text-sm mt-1">
                   Status:{" "}
@@ -130,22 +164,46 @@ export default function LoanRequests() {
                 </p>
               </div>
 
-              {req.status === "pending" && (
-                <div className="flex gap-2">
-                  <Button
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => updateStatus(req.id, "approved")}
+              <div className="flex flex-wrap gap-4 mt-4 items-center">
+                {req.status === "pending" ? (
+                  <>
+                    <button
+                      onClick={() => handleUpdate(req.id, "approved")}
+                      disabled={loadingStates[req.id]?.approved}
+                      className={`px-3 py-1.5 text-sm rounded transition text-white ${
+                        loadingStates[req.id]?.approved
+                          ? "bg-green-300 cursor-not-allowed"
+                          : "bg-green-500 hover:bg-green-600"
+                      }`}
+                    >
+                      {loadingStates[req.id]?.approved
+                        ? "Approving..."
+                        : "Approve"}
+                    </button>
+                    <button
+                      onClick={() => handleUpdate(req.id, "rejected")}
+                      disabled={loadingStates[req.id]?.rejected}
+                      className={`px-3 py-1.5 text-sm rounded transition text-white ${
+                        loadingStates[req.id]?.rejected
+                          ? "bg-red-300 cursor-not-allowed"
+                          : "bg-red-500 hover:bg-red-600"
+                      }`}
+                    >
+                      {loadingStates[req.id]?.rejected
+                        ? "Rejecting..."
+                        : "Reject"}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => handleDelete(req.id)}
+                    className="flex items-center text-red-400 hover:text-red-500 text-sm"
                   >
-                    Approve
-                  </Button>
-                  <Button
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                    onClick={() => updateStatus(req.id, "rejected")}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              )}
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
