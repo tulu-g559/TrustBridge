@@ -6,7 +6,7 @@ import './index.css'
 
 import { WagmiProvider, http } from 'wagmi'
 import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit'
-import { baseSepolia } from 'wagmi/chains'
+import { sepolia } from 'wagmi/chains'
 import '@rainbow-me/rainbowkit/styles.css'
 
 import { ToastContainer } from 'react-toastify'
@@ -24,9 +24,9 @@ const queryClient = new QueryClient()
 const config = getDefaultConfig({
   appName: 'TrustBridge',
   projectId: '32f98c81fb0e39fb7c0911e1df060ab7', // Replace with your WalletConnect project ID
-  chains: [baseSepolia],
+  chains: [sepolia],
   transports: {
-    [baseSepolia.id]: http()
+    [sepolia.id]: http()
   }
 })
 

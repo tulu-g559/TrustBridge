@@ -11,7 +11,7 @@ import {
   onSnapshot,
   getDoc,
 } from "firebase/firestore"
-import { auth, firestore } from "../../firebase"
+import { auth, db as firestore } from "../../firebase"
 import { useAuthState } from "react-firebase-hooks/auth"
 import DashboardWrapper from "../../components/shared/DashboardWrapper"
 import { User, Timer, Trash2 } from "lucide-react"
@@ -36,18 +36,26 @@ export default function LoanRequests() {
           const data = docSnap.data()
           const borrowerId = data.borrowerId
 
-          let borrowerName = "Borrower"
-          try {
-            const borrowerRef = doc(firestore, "users", borrowerId)
-            const borrowerSnap = await getDoc(borrowerRef)
-            if (borrowerSnap.exists()) {
-              borrowerName = borrowerSnap.data().name || borrowerName
-            }
-          } catch (err) {
-            console.error("Failed to fetch borrower name:", err)
-          }
+          const borrowerName = data.borrowerName || "Borrower"
 
-          return { id: docSnap.id, ...data, borrowerName }
+          try {
+          const borrowerDoc = await getDoc(doc(firestore, "users", borrowerId))
+          const borrowerData = borrowerDoc.data()
+          const borrowerName = borrowerData?.fullName || "Anonymous"
+
+          return { 
+            id: docSnap.id, 
+            ...data, 
+            borrowerName 
+          }
+        } catch (error) {
+          console.error("Error fetching borrower details:", error)
+          return { 
+            id: docSnap.id, 
+            ...data, 
+            borrowerName: "Anonymous" 
+          }
+        }
         })
       )
 

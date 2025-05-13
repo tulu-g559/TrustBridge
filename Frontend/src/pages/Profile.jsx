@@ -22,9 +22,11 @@ export default function Profile() {
     walletAddress: "",
   });
 
-  const [userType, setUserType] = useState("User");
-  const [collectionPath, setCollectionPath] = useState("lenders");
+  // Initialize role and collectionPath from localStorage or default values
+  const [role, setRole] = useState(() => localStorage.getItem("userRole") || "borrower");
+  const [collectionPath, setCollectionPath] = useState(() => localStorage.getItem("userType") === "lender" ? "lenders" : "users");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Load Cloudinary script
   useEffect(() => {
@@ -39,21 +41,23 @@ export default function Profile() {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      const fetchProfile = async () => {
-        let ref = doc(db, "lenders", user.uid);
-        let snap = await getDoc(ref);
+    if (!user) return;
 
-        if (!snap.exists()) {
-          ref = doc(db, "users", user.uid);
-          snap = await getDoc(ref);
-          if (snap.exists()) {
-            setCollectionPath("users");
-          }
-        }
+    const fetchProfile = async () => {
+      setLoading(true);
+      const uid = user.uid;
+      
+      try {
+        // Check collection based on stored user type
+        const collection = localStorage.getItem("userType") === "lender" ? "lenders" : "users";
+        const ref = doc(db, collection, uid);
+        const snap = await getDoc(ref);
 
         if (snap.exists()) {
           const data = snap.data();
+          setCollectionPath(collection);
+          localStorage.setItem("collectionPath", collection);
+          
           setProfileData({
             fullName: data.fullName || "",
             bio: data.bio || "",
@@ -63,31 +67,63 @@ export default function Profile() {
             photoURL: data.photoURL || "",
             walletAddress: data.walletAddress || "",
           });
-          setUserType(data.userType || localStorage.getItem("userType") || "User");
-        }
-      };
 
-      fetchProfile();
-    }
+          const userRole = collection === "lenders" ? "lender" : "borrower";
+          setRole(userRole);
+          localStorage.setItem("userRole", userRole);
+        } else {
+          // If document doesn't exist, try the other collection
+          const altCollection = collection === "lenders" ? "users" : "lenders";
+          const altRef = doc(db, altCollection, uid);
+          const altSnap = await getDoc(altRef);
+
+          if (altSnap.exists()) {
+            const data = altSnap.data();
+            setCollectionPath(altCollection);
+            localStorage.setItem("collectionPath", altCollection);
+            
+            setProfileData({
+              fullName: data.fullName || "",
+              bio: data.bio || "",
+              email: data.email || user.email || "",
+              phone: data.phone || "",
+              panId: data.panId || "",
+              photoURL: data.photoURL || "",
+              walletAddress: data.walletAddress || "",
+            });
+
+            const userRole = altCollection === "lenders" ? "lender" : "borrower";
+            setRole(userRole);
+            localStorage.setItem("userRole", userRole);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        toast.error("Failed to load profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, [user]);
 
-  // Auto-save wallet address
   useEffect(() => {
     const updateWallet = async () => {
-      if (
-        user &&
-        isConnected &&
-        address &&
-        profileData.walletAddress !== address
-      ) {
-        const ref = doc(db, collectionPath, user.uid);
-        await setDoc(ref, { walletAddress: address }, { merge: true });
-        setProfileData((prev) => ({ ...prev, walletAddress: address }));
-        toast.success("Wallet address saved");
+      if (user && isConnected && address && profileData.walletAddress !== address) {
+        try {
+          const ref = doc(db, collectionPath, user.uid);
+          await setDoc(ref, { walletAddress: address }, { merge: true });
+          setProfileData((prev) => ({ ...prev, walletAddress: address }));
+          toast.success("Wallet address saved");
+        } catch (err) {
+          console.error("Error updating wallet:", err);
+          toast.error("Failed to update wallet address");
+        }
       }
     };
     updateWallet();
-  }, [isConnected, address, collectionPath]);
+  }, [isConnected, address, collectionPath, user]);
 
   const handleChange = (field, value) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
@@ -97,10 +133,10 @@ export default function Profile() {
     try {
       if (!user) return;
       const ref = doc(db, collectionPath, user.uid);
-      await setDoc(ref, { ...profileData, userType }, { merge: true });
-      localStorage.setItem("userType", userType);
+      await setDoc(ref, { ...profileData, role }, { merge: true });
       toast.success("Profile updated");
     } catch (err) {
+      console.error("Save error:", err);
       toast.error("Update failed");
     }
   };
@@ -117,11 +153,21 @@ export default function Profile() {
         cropping: true,
       },
       async (err, result) => {
-        if (!err && result.event === "success") {
+        if (err) {
+          console.error("Cloudinary error:", err);
+          toast.error("Upload failed");
+          return;
+        }
+        if (result.event === "success") {
           const img = result.info.secure_url;
-          setProfileData((prev) => ({ ...prev, photoURL: img }));
-          await setDoc(doc(db, collectionPath, user.uid), { photoURL: img }, { merge: true });
-          toast.success("Photo uploaded");
+          try {
+            await setDoc(doc(db, collectionPath, user.uid), { photoURL: img }, { merge: true });
+            setProfileData((prev) => ({ ...prev, photoURL: img }));
+            toast.success("Photo uploaded");
+          } catch (err) {
+            console.error("Photo save error:", err);
+            toast.error("Failed to save photo");
+          }
         }
       }
     );
@@ -129,6 +175,7 @@ export default function Profile() {
   };
 
   if (!user) return <div className="text-white p-10 text-center">Please log in</div>;
+  if (loading) return <div className="text-white p-10 text-center">Loading profile...</div>;
 
   return (
     <>
@@ -147,7 +194,7 @@ export default function Profile() {
           <div>
             <h2 className="text-3xl font-bold">{profileData.fullName}</h2>
             <p className="bg-gradient-to-r from-purple-500 to-blue-500 inline-block mt-2 px-4 py-1 rounded-full text-white font-medium">
-              Role: {userType}
+              Role: {role.charAt(0).toUpperCase() + role.slice(1)}
             </p>
           </div>
         </div>
@@ -156,7 +203,7 @@ export default function Profile() {
           {["email", "phone", "panId", "bio"].map((field) => (
             <div key={field}>
               <p className="text-gray-400 capitalize">{field.replace(/([A-Z])/g, " $1")}</p>
-              <p className="text-xl">{profileData[field]}</p>
+              <p className="text-xl">{profileData[field] || "Not set"}</p>
             </div>
           ))}
         </div>
@@ -189,7 +236,9 @@ export default function Profile() {
               </button>
               {["fullName", "phone", "panId", "bio"].map((field) => (
                 <div className="mb-3" key={field}>
-                  <label className="text-sm text-gray-400">{field}</label>
+                  <label className="text-sm text-gray-400 capitalize">
+                    {field.replace(/([A-Z])/g, " $1")}
+                  </label>
                   <input
                     className="w-full bg-gray-800 p-2 rounded mt-1"
                     value={profileData[field]}
