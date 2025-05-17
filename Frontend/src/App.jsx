@@ -79,6 +79,7 @@ export default function App() {
           <Route path="/lender/borrowers" element={<BorrowerList />} />
           <Route path="/lender/repayments" element={<RepaymentTracker />} />
           <Route path="/lender/profile" element={<Profile />} />
+          <Route path="/trustscore" element={<TrustScore />} />
         </Route>
 
         <Route path="/lender/preferences" element={<PrivateRoute requiredRole="lender" />}>

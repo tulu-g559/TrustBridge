@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
 import { Button } from "../components/ui/button";
-// import LanguageSelector from "./language-selector";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "../firebase";
 import { signOut } from "firebase/auth";
@@ -103,7 +102,6 @@ export default function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
           <RoleLinks />
-          {/* <LanguageSelector /> */}
           <AuthButton />
         </nav>
 

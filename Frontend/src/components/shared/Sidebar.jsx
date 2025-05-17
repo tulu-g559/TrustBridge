@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, FileText, Search, Users, CreditCard, BookOpen } from "lucide-react";
+import { Home, FileText, Search, Users, CreditCard, BookOpen, ShieldCheck } from "lucide-react";
 
 const Sidebar = () => {
   const [role, setRole] = useState(null);
@@ -41,11 +41,11 @@ const Sidebar = () => {
                   <Home size={18} /> Dashboard
                 </Link>
                 <Link
-                  to="/borrower/loans"
-                  className={`${baseStyle} ${isActive("/loans") ? activeStyle : ""}`}
+                  to="/trustscore"
+                  className={`${baseStyle} ${isActive("/trustscore") ? activeStyle : ""}`}
                   onClick={() => setIsMenuOpen(false)} // Close menu on click
                 >
-                  <FileText size={18} /> My Loans
+                  <ShieldCheck size={18} /> Trust Score
                 </Link>
                 <Link
                   to="/borrower/find-lenders"
@@ -53,6 +53,13 @@ const Sidebar = () => {
                   onClick={() => setIsMenuOpen(false)} // Close menu on click
                 >
                   <Search size={18} /> Find Lenders
+                </Link>
+                <Link
+                  to="/borrower/repay"
+                  className={`${baseStyle} ${isActive("/borrower/repay") ? activeStyle : ""}`}
+                  onClick={() => setIsMenuOpen(false)} // Close menu on click
+                >
+                  <FileText size={18} /> Repay Loan
                 </Link>
               </>
             )}
