@@ -14,14 +14,56 @@ import {
 import { auth, db as firestore } from "../../firebase"
 import { useAuthState } from "react-firebase-hooks/auth"
 import DashboardWrapper from "../../components/shared/DashboardWrapper"
-import { User, Timer, Trash2 } from "lucide-react"
+import { User, Timer, Trash2, Wallet } from "lucide-react"
 import { toast } from "sonner"
+import { ethers } from 'ethers'
+import { useAccount, useBalance, useChainId } from 'wagmi'
+
+// Sepolia Network Configuration
+const SEPOLIA_CHAIN_ID = 11155111
+const SEPOLIA_RPC_URL = "https://eth-sepolia.g.alchemy.com/v2/xaLLkN6DbiZVjrjKP3C3uaI3ULzEkraP" // Replace with your Alchemy API key
+
+const isSepoliaNetwork = (chainId) => chainId === SEPOLIA_CHAIN_ID
 
 export default function LoanRequests() {
   const [user] = useAuthState(auth)
   const [requests, setRequests] = useState([])
   const [loadingStates, setLoadingStates] = useState({})
+  const { address: walletAddress, isConnected } = useAccount()
+  // const { chain } = useNetwork()
+  const { data: balance } = useBalance({
+    address: walletAddress,
+    watch: true,
+  })
 
+   const chainId = useChainId()
+  const isValidNetwork = isSepoliaNetwork(chainId)
+
+  // Add Sepolia network to MetaMask
+  const addSepoliaNetwork = async () => {
+    if (!window.ethereum) return
+    
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}`,
+          chainName: 'Sepolia Test Network',
+          nativeCurrency: {
+            name: 'Sepolia ETH',
+            symbol: 'SEP',
+            decimals: 18
+          },
+          rpcUrls: [SEPOLIA_RPC_URL],
+          blockExplorerUrls: ['https://sepolia.etherscan.io/']
+        }]
+      })
+    } catch (error) {
+      console.error('Error adding Sepolia network:', error)
+    }
+  }
+
+  // Fetch loan requests
   useEffect(() => {
     if (!user) return
 
@@ -36,30 +78,27 @@ export default function LoanRequests() {
           const data = docSnap.data()
           const borrowerId = data.borrowerId
 
-          const borrowerName = data.borrowerName || "Borrower"
-
           try {
-          const borrowerDoc = await getDoc(doc(firestore, "users", borrowerId))
-          const borrowerData = borrowerDoc.data()
-          const borrowerName = borrowerData?.fullName || "Anonymous"
-
-          return { 
-            id: docSnap.id, 
-            ...data, 
-            borrowerName 
+            const borrowerDoc = await getDoc(doc(firestore, "users", borrowerId))
+            const borrowerData = borrowerDoc.data()
+            return { 
+              id: docSnap.id, 
+              ...data, 
+              borrowerName: borrowerData?.fullName || "Anonymous",
+              borrowerWallet: borrowerData?.walletAddress
+            }
+          } catch (error) {
+            console.error("Error fetching borrower details:", error)
+            return { 
+              id: docSnap.id, 
+              ...data, 
+              borrowerName: "Anonymous",
+              borrowerWallet: null
+            }
           }
-        } catch (error) {
-          console.error("Error fetching borrower details:", error)
-          return { 
-            id: docSnap.id, 
-            ...data, 
-            borrowerName: "Anonymous" 
-          }
-        }
         })
       )
 
-      // Sort: pending first, then approved/rejected
       const sorted = fetchedRequests.sort((a, b) => {
         const statusOrder = { pending: 0, approved: 1, rejected: 2 }
         return statusOrder[a.status] - statusOrder[b.status]
@@ -72,30 +111,107 @@ export default function LoanRequests() {
   }, [user])
 
   const handleUpdate = async (id, status) => {
+    if (!isConnected) {
+      toast.error("Please connect your wallet first")
+      return
+    }
+
+    if (!isValidNetwork) {
+      toast.error("Please switch to Sepolia network")
+      addSepoliaNetwork()
+      return
+    }
+
     setLoadingStates((prev) => ({
       ...prev,
       [id]: { ...(prev[id] || {}), [status]: true }
     }))
+
     try {
       const requestRef = doc(firestore, "loanRequests", id)
-      await updateDoc(requestRef, { status })
-
       const requestSnap = await getDoc(requestRef)
       const request = requestSnap.data()
 
-      await addDoc(collection(firestore, "notifications"), {
-        userId: request.borrowerId,
-        type: "loan_status_update",
-        status,
-        message: `Your loan request has been ${status}.`,
-        requestId: id,
-        createdAt: serverTimestamp(),
-      })
+      if (status === "approved") {
+        if (!window.ethereum) {
+          throw new Error("Please install MetaMask")
+        }
 
-      toast.success(`Loan request ${status}`)
+        if (!request.borrowerWallet) {
+          throw new Error("Borrower wallet address not found")
+        }
+
+        try {
+          // Initialize provider
+          const provider = new ethers.BrowserProvider(window.ethereum)
+          const signer = await provider.getSigner()
+
+          // Convert amount to wei
+          const amount = ethers.parseEther(request.amount.toString())
+
+          // Check balance
+          const balance = await provider.getBalance(walletAddress)
+          if (balance < amount) {
+            throw new Error("Insufficient Sepolia ETH balance")
+          }
+
+          // Send transaction
+          const tx = await signer.sendTransaction({
+            to: request.borrowerWallet,
+            value: amount
+          })
+
+          toast.info("Transaction submitted, waiting for confirmation...")
+
+          // Wait for confirmation
+          const receipt = await tx.wait()
+
+          // Update loan request status
+          await updateDoc(requestRef, {
+            status,
+            transactionHash: receipt.hash,
+            transferredAt: serverTimestamp(),
+            transferAmount: request.amount,
+            chainId: SEPOLIA_CHAIN_ID
+          })
+
+          // Create notification
+          await addDoc(collection(firestore, "notifications"), {
+            userId: request.borrowerId,
+            type: "loan_status_update",
+            status,
+            message: `Your loan request for ${request.amount} Sepolia ETH has been approved and transferred!`,
+            requestId: id,
+            transactionHash: receipt.hash,
+            createdAt: serverTimestamp(),
+          })
+
+          toast.success("Loan approved and Sepolia ETH transferred successfully!")
+        } catch (error) {
+          console.error("Transaction error:", error)
+          throw new Error(error.message || "Failed to transfer Sepolia ETH")
+        }
+      } else {
+        // Handle rejection
+        await updateDoc(requestRef, { 
+          status,
+          updatedAt: serverTimestamp()
+        })
+
+        await addDoc(collection(firestore, "notifications"), {
+          userId: request.borrowerId,
+          type: "loan_status_update",
+          status,
+          message: `Your loan request has been ${status}.`,
+          requestId: id,
+          createdAt: serverTimestamp(),
+        })
+
+        toast.success(`Loan request ${status}`)
+      }
     } catch (error) {
       console.error("Error updating status:", error)
-      toast.error("Failed to update loan request")
+      toast.error(error.message || "Failed to update loan request")
     } finally {
       setLoadingStates((prev) => ({
         ...prev,
@@ -117,9 +233,36 @@ export default function LoanRequests() {
 
   return (
     <DashboardWrapper>
-      <h1 className="text-2xl font-bold mb-6 text-gradient bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-        Pending Loan Requests
-      </h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gradient bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+          Loan Requests
+        </h1>
+        
+        {balance && (
+          <div className="flex items-center gap-2 text-gray-400">
+            <Wallet className="w-4 h-4" />
+            Balance: {ethers.formatEther(balance.value)} SEP
+          </div>
+        )}
+      </div>
+
+      {!isConnected && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
+          <p className="text-yellow-400">Please connect your wallet to process loans</p>
+        </div>
+      )}
+
+      {!isValidNetwork && isConnected && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
+          <p className="text-red-400">Please switch to Sepolia network to process loans</p>
+          <button
+            onClick={addSepoliaNetwork}
+            className="mt-2 text-sm text-blue-400 hover:text-blue-300"
+          >
+            Add Sepolia Network to MetaMask
+          </button>
+        </div>
+      )}
 
       {requests.length === 0 ? (
         <p className="text-gray-400">No requests found.</p>
@@ -133,13 +276,13 @@ export default function LoanRequests() {
               <div>
                 <div className="flex items-center gap-2 text-lg font-semibold">
                   <User className="w-5 h-5 text-blue-400" />
-                  {req.borrowerName || "Borrower"}
+                  {req.borrowerName}
                 </div>
                 {req.reason && (
                   <p className="text-sm text-gray-400">Reason: {req.reason}</p>
                 )}
                 <p className="text-sm text-gray-400">
-                  Amount: ₹{req.amount} | Interest: {req.interestRate || 0}%
+                  Amount: {req.amount} SEP | Interest: {req.interestRate || 0}%
                 </p>
                 <p className="text-sm text-gray-400 flex items-center gap-1">
                   <Timer className="w-4 h-4" />
@@ -162,6 +305,16 @@ export default function LoanRequests() {
                     {req.status}
                   </span>
                 </p>
+                {req.transactionHash && (
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${req.transactionHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-400 hover:text-blue-300 mt-1 inline-block"
+                  >
+                    View Transaction ↗
+                  </a>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-4 mt-4 items-center">
@@ -169,16 +322,16 @@ export default function LoanRequests() {
                   <>
                     <button
                       onClick={() => handleUpdate(req.id, "approved")}
-                      disabled={loadingStates[req.id]?.approved}
+                      disabled={loadingStates[req.id]?.approved || !isConnected || !isValidNetwork}
                       className={`px-3 py-1.5 text-sm rounded transition text-white ${
-                        loadingStates[req.id]?.approved
+                        loadingStates[req.id]?.approved || !isConnected || !isValidNetwork
                           ? "bg-green-300 cursor-not-allowed"
                           : "bg-green-500 hover:bg-green-600"
                       }`}
                     >
                       {loadingStates[req.id]?.approved
-                        ? "Approving..."
-                        : "Approve"}
+                        ? "Processing..."
+                        : "Approve & Transfer"}
                     </button>
                     <button
                       onClick={() => handleUpdate(req.id, "rejected")}

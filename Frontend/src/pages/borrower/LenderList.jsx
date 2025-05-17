@@ -8,12 +8,14 @@ import {
   doc,
   query,
   where,
+  getDoc,
   addDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import { HandCoins, Percent, BadgeCheck } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { toast } from "sonner";
+import { useAccount } from "wagmi";
 
 const LenderList = () => {
   const [lenders, setLenders] = useState([]);
@@ -21,6 +23,7 @@ const LenderList = () => {
   const [loading, setLoading] = useState(true);
   const [applyingId, setApplyingId] = useState(null);
   const [user] = useAuthState(auth);
+  const { address: walletAddress, isConnected } = useAccount();
 
   // Fetch all lenders
   useEffect(() => {
@@ -84,15 +87,33 @@ const LenderList = () => {
       return;
     }
 
+    if (!isConnected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    if (!walletAddress) {
+      toast.error("Please connect your wallet to continue");
+      return;
+    }
+
     setApplyingId(lender.id);
     try {
       const borrowerDoc = await getDoc(doc(db, "users", user.uid));
       const borrowerData = borrowerDoc.data();
 
+      if (!borrowerData?.walletAddress) {
+        // Update borrower's wallet address if not set
+        await updateDoc(doc(db, "users", user.uid), {
+          walletAddress: walletAddress
+        });
+      }
+
       await addDoc(collection(db, "loanRequests"), {
         lenderId: lender.id,
         borrowerId: user.uid,
         borrowerName: borrowerData?.fullName || "Anonymous",
+        borrowerWallet: walletAddress,
         amount: lender.maxAmount,
         interestRate: lender.interestRate,
         trustScore: "N/A",
@@ -158,27 +179,35 @@ const LenderList = () => {
                   Location: {lender.location || "Anywhere"}
                 </p>
 
-                {status === "approved" ? (
-                  <Button disabled className="bg-green-700 text-white w-full cursor-default">
-                    Approved
-                  </Button>
-                ) : status === "rejected" ? (
-                  <Button disabled className="bg-red-600 text-white w-full cursor-default">
-                    Rejected
-                  </Button>
-                ) : status === "pending" ? (
-                  <Button disabled className="bg-yellow-600 text-white w-full cursor-default">
-                    Applied
-                  </Button>
-                ) : (
+                {!isConnected ? (
                   <Button
-                    className="bg-purple-600 hover:bg-purple-700 w-full"
-                    onClick={() => handleApply(lender)}
-                    disabled={applyingId === lender.id}
+                    disabled
+                    className="bg-gray-600 text-white w-full cursor-not-allowed"
                   >
-                    {applyingId === lender.id ? "Applying..." : "Apply for Loan"}
+                    Connect Wallet First
                   </Button>
-                )}
+                ) :
+                   status === "approved" ? (
+                    <Button disabled className="bg-green-700 text-white w-full cursor-default">
+                      Approved
+                    </Button>
+                  ) : status === "rejected" ? (
+                    <Button disabled className="bg-red-600 text-white w-full cursor-default">
+                      Rejected
+                    </Button>
+                  ) : status === "pending" ? (
+                    <Button disabled className="bg-yellow-600 text-white w-full cursor-default">
+                      Applied
+                    </Button>
+                  ) : (
+                    <Button
+                      className="bg-purple-600 hover:bg-purple-700 w-full"
+                      onClick={() => handleApply(lender)}
+                      disabled={applyingId === lender.id}
+                    >
+                      {applyingId === lender.id ? "Applying..." : "Apply for Loan"}
+                    </Button>
+                  )}
               </div>
             );
           })}

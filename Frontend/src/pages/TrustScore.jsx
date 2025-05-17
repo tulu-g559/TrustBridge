@@ -8,7 +8,7 @@ import {
     Clock,
     Loader2,
 } from "lucide-react";
-
+import DashboardWrapper from "../components/shared/DashboardWrapper";
 import Header from "../components/header"
 import Footer from "../components/footer"
 
@@ -103,7 +103,8 @@ const TrustScore = () => {
 
     return (
         <div>
-            <Header />
+            {/* <Header /> */}
+            <DashboardWrapper>
             <div className="bg-[#0f172a] text-white min-h-screen p-6">
                 <div className="flex flex-col lg:flex-row gap-6">
                     {/* Trust Score Panel */}
@@ -251,7 +252,8 @@ const TrustScore = () => {
                 
                 </div>
             </div>
-            <Footer />
+            </DashboardWrapper>
+            {/* <Footer /> */}
         </div>
     );
 };

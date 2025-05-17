@@ -1,8 +1,16 @@
 import { Button } from "../components/ui/button"
-import { Mic } from "lucide-react"
+import { Mic, User } from "lucide-react"
 import {Link} from "react-router-dom"
+import { useEffect, useState } from "react"
 
 export default function HeroSection() {
+
+  const [role, setRole] = useState(null);
+  useEffect(() => {
+      const userType = localStorage.getItem("userType");
+      setRole(userType);
+    }, []);
+    
   return (
     <section className="relative py-20 md:py-32 overflow-hidden">
       {/* Background gradient */}
@@ -30,19 +38,43 @@ export default function HeroSection() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          {role === "borrower" && (
           <Link to="/trustscore">
             <Button className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-full px-8 py-6 text-lg">
               Get Your Trust Score
             </Button>
             </Link>
+            )}
+            {role === "lender" && (
+              <Link to="/lender/dashboard">
+            <Button className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-full px-8 py-6 text-lg">
+              Dashboard
+            </Button>
+            </Link>
+            )}
 
+            {role === "borrower" && (
+          <Link to="/borrower/profile">
             <Button
               variant="outline"
               className="border-gray-700 text-gray-300 hover:text-white rounded-full px-6 py-6 flex items-center gap-2"
             >
-              <Mic size={18} />
-              <span>Voice Assistance</span>
+              <User size={18} />
+              <span>Check Profile</span>
             </Button>
+            </Link>
+            )}
+            {role === "lender" && (
+              <Link to="/lender/profile">
+            <Button
+              variant="outline"
+              className="border-gray-700 text-gray-300 hover:text-white rounded-full px-6 py-6 flex items-center gap-2"
+            >
+              <User size={18} />
+              <span>Check Profile</span>
+            </Button>
+            </Link>
+            )}
           </div>
 
           <div className="mt-12 flex items-center justify-center">
