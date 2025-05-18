@@ -12,6 +12,7 @@ import TrustScore from "./pages/TrustScore";
 import Team from "./pages/members"
 import LenderPreferencesForm from "./pages/lender/LenderPreferencesForm";
 import LenderList from "./pages/borrower/LenderList";
+import DocPage from "./pages/documents";
 
 
 // Borrower Pages
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/about" element={<About />} />
         <Route path="/trustscore" element={<TrustScore />} />
         <Route path="/team" element={<Team />} />
+        <Route path="/documents" element={<DocPage />} />
         <Route
           path="/auth-selector"
           element={
