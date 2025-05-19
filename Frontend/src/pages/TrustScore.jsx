@@ -40,7 +40,7 @@
 
 //     //     setLoading(true);
 //     //     const formData = new FormData();
-        
+
 //     //     files.forEach(file => {
 //     //         formData.append("document", file);
 //     //     });
@@ -61,10 +61,10 @@
 
 //         setLoading(true);
 //         const formData = new FormData();
-        
+
 //         // Add UID to form data
 //         formData.append("uid", user.uid);
-        
+
 //         files.forEach(file => {
 //             formData.append("document", file);
 //         });
@@ -80,7 +80,7 @@
 //             if (response.ok) {
 //                 setTrustScore(data.trust_score);
 //                 setExplanation(data.explanation);
-                
+
 //                 // Add uploaded files to the list
 //                 const newDocs = files.map(f => ({
 //                     name: f.name,
@@ -88,7 +88,7 @@
 //                     uploadedAt: new Date().toLocaleDateString(),
 //                 }));
 //                 setUploadedDocs(prev => [...prev, ...newDocs]);
-                
+
 //                 toast.success("Documents processed successfully!");
 //             } else {
 //                 throw new Error(data.error || "Failed to process documents");
@@ -167,7 +167,7 @@
 //                                     </linearGradient>
 //                                 </defs>
 //                             </svg>
-                            
+
 //                             <motion.div
 //                                 className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center"
 //                                 animate={{ scale: [0.95, 1.05, 1] }}
@@ -274,7 +274,7 @@
 //                             </div>
 //                         </motion.div>
 //                     </div>
-                
+
 //                 </div>
 //             </div>
 //             </DashboardWrapper>
@@ -304,28 +304,30 @@ export default function TrustScore() {
     const [loading, setLoading] = useState(false);
     const [explanation, setExplanation] = useState("");
 
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
     // Fetch existing trust score when component mounts
     useEffect(() => {
-    const fetchExistingTrustScore = async () => {
-        if (!user) return;
+        const fetchExistingTrustScore = async () => {
+            if (!user) return;
 
-        try {
-            const response = await fetch(`http://localhost:5000/user/trust-score/${user.uid}`);
-            const data = await response.json();
+            try {
+                const response = await fetch(`${BACKEND_URL}/user/trust-score/${user.uid}`);
+                const data = await response.json();
 
-            if (response.ok && data.trust_score) {
-                setTrustScore(data.trust_score.current);
-                if (data.trust_score.history?.length > 0) {
-                    setExplanation(data.trust_score.history[0].reason);
+                if (response.ok && data.trust_score) {
+                    setTrustScore(data.trust_score.current);
+                    if (data.trust_score.history?.length > 0) {
+                        setExplanation(data.trust_score.history[0].reason);
+                    }
                 }
+            } catch (error) {
+                console.error("Error fetching trust score:", error);
             }
-        } catch (error) {
-            console.error("Error fetching trust score:", error);
-        }
-    };
+        };
 
-    fetchExistingTrustScore();
-}, [user]);
+        fetchExistingTrustScore();
+    }, [user]);
 
     const handleFileUpload = async (e) => {
         if (!user) {
@@ -339,37 +341,38 @@ export default function TrustScore() {
         setLoading(true);
         const formData = new FormData();
         formData.append("uid", user.uid);
-        
+
         files.forEach(file => {
             formData.append("document", file);
         });
 
         try {
-            const response = await fetch("http://localhost:5000/vision/first-trustscore", {
+            const response = await fetch(`${BACKEND_URL}/vision/first-trustscore`, {
                 method: "POST",
                 body: formData,
             });
+
 
             const data = await response.json();
 
             if (response.ok) {
                 setTrustScore(data.trust_score);
                 setExplanation(data.explanation);
-                
+
                 const newDocs = files.map(f => ({
                     name: f.name,
                     type: f.type,
                     uploadedAt: new Date().toLocaleDateString()
                 }));
                 setUploadedDocs(prev => [...prev, ...newDocs]);
-                
+
                 // Fetch updated trust score after processing
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.data();
                 if (userData?.trust_score?.current) {
                     setTrustScore(userData.trust_score.current);
                 }
-                
+
                 toast.success("Documents processed successfully!");
             } else {
                 throw new Error(data.error || "Failed to process documents");
