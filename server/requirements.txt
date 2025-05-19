@@ -7,3 +7,4 @@ google-generativeai
 python-dateutil
 Werkzeug
 base64
+gunicorn
