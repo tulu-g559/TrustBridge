@@ -20,7 +20,7 @@ export default function Footer() {
         { name: "Blog", to: "/blog" },
         { name: "FAQ", to: "/faq" },
         { name: "Support", to: "/support" },
-        { name: "Documentation", to: "/docs" },
+        { name: "Documentation", to: "/documents" },
       ],
     },
     {

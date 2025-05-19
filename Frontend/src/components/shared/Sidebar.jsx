@@ -81,13 +81,6 @@ const Sidebar = () => {
                   <Users size={18} /> Loan Requests
                 </Link>
                 <Link
-                  to="/lender/repayments"
-                  className={`${baseStyle} ${isActive("/repayments") ? activeStyle : ""}`}
-                  onClick={() => setIsMenuOpen(false)} // Close menu on click
-                >
-                  <CreditCard size={18} /> Repayments
-                </Link>
-                <Link
                   to="/lender/preferences"
                   className={`${baseStyle} ${isActive("/preferences") ? activeStyle : ""}`}
                   onClick={() => setIsMenuOpen(false)} // Close menu on click

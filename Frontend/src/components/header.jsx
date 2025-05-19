@@ -89,9 +89,9 @@ export default function Header() {
         <div className="flex items-center">
           <Link to="/" className="flex items-center">
             <img
-              src="/logo3.png"
+              src="/tlogofinal.png"
               alt="TrustBridge Logo"
-              className="h-18 w-auto pr-2 pt-[2px]"
+              className="h-13 w-auto pr-2 pt-[2px]"
             />
             <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-blue-500">
               TrustBridge
