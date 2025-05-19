@@ -26,4 +26,4 @@ dist-ssr
 # Backend
 .env
 firebase_config.json
-env2
+
