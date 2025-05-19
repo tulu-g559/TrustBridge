@@ -13,168 +13,245 @@ export default function ZenCueFullDocPage() {
   }, []);
 
   return (
-    <div className="bg-gradient-to-br from-[#e1f5fe] via-[#fce4ec] to-[#fff3e0] text-gray-800 min-h-screen overflow-x-hidden relative">
-      {/* Animated floating shapes */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute animate-float-slow top-10 left-10 w-20 h-20 bg-purple-200 rounded-full blur-xl opacity-30" />
-        <div className="absolute animate-float-fast top-1/3 right-10 w-32 h-32 bg-pink-200 rounded-full blur-xl opacity-20" />
-        <div className="absolute animate-float-med bottom-10 left-1/4 w-24 h-24 bg-yellow-100 rounded-full blur-xl opacity-25" />
-      </div>
-
-      {/* ✅ Use existing Header instead of Navigation (fixes potential undefined component) */}
-      <Header />
-
-      <main className="relative z-10 px-6 sm:px-12 py-16 max-w-5xl mx-auto">
-        <motion.h1
-          className="text-5xl font-extrabold text-center text-purple-800 drop-shadow-lg mb-16 flex items-center justify-center gap-3"
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Sparkles className="w-10 h-10 text-pink-500" />
-          ZenCue: Documentation & User Guide
-        </motion.h1>
-
-        <div className="space-y-24">
-          {sections.map((section, i) => (
-            <motion.section
-              key={i}
-              className="w-full max-w-4xl mx-auto"
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: i * 0.1 }}
-            >
-              <h2 className="text-3xl font-bold text-purple-700 mb-4">{section.title}</h2>
-              <div className="prose prose-lg prose-pink max-w-none text-gray-700 text-md space-y-3">
-                {section.content}
-              </div>
-            </motion.section>
-          ))}
+    <>
+      <div className="bg-gradient-to-br from-black to-[#232946] text-white min-h-screen overflow-x-hidden relative pb-0">
+        {/* Hazy background overlay */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="w-full h-full bg-white/10 backdrop-blur-2xl" />
         </div>
-      </main>
 
+        {/* Animated floating shapes */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="absolute animate-float-slow top-10 left-10 w-20 h-20 bg-purple-200 rounded-full blur-xl opacity-30" />
+          <div className="absolute animate-float-fast top-1/3 right-10 w-32 h-32 bg-pink-200 rounded-full blur-xl opacity-20" />
+          <div className="absolute animate-float-med bottom-10 left-1/4 w-24 h-24 bg-yellow-100 rounded-full blur-xl opacity-25" />
+          {/* Additional circles for more visual interest, moved away from text sections */}
+          <div className="absolute animate-float-slow top-1/4 left-1/2 w-28 h-28 bg-blue-200 rounded-full blur-2xl opacity-20" />
+          <div className="absolute animate-float-fast bottom-1/3 right-1/3 w-16 h-16 bg-green-200 rounded-full blur-xl opacity-20" />
+          <div className="absolute animate-float-slow top-0 right-1/4 w-24 h-24 bg-pink-100 rounded-full blur-2xl opacity-15" />
+          <div className="absolute animate-float-med bottom-32 left-1/6 w-20 h-20 bg-indigo-200 rounded-full blur-xl opacity-20" />
+        </div>
+
+        {/* ✅ Use existing Header instead of Navigation (fixes potential undefined component) */}
+        <Header />
+
+        <main className="relative z-10 px-6 sm:px-12 py-16 max-w-5xl mx-auto">
+          <motion.h1
+            className="text-5xl font-extrabold text-center drop-shadow-lg mb-16 flex items-center justify-center gap-3
+                      bg-gradient-to-r from-purple-400 via-blue-400 to-purple-700 bg-clip-text text-transparent"
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Sparkles className="w-10 h-10 text-pink-500" />
+            TrustBridge: Documentation & User Guide
+          </motion.h1>
+          {/* Gradient Box with Welcome Content */}
+          <div className="bg-gradient-to-r from-[#232946] to-[#181c2f] rounded-xl shadow-lg p-6 mb-12 max-w-3xl mx-auto border border-[#232946]/60 shimmer">
+            <h3 className="text-2xl font-bold mb-2 text-white">Welcome to TrustBridge!</h3>
+            <p className="text-gray-300 text-lg">
+              Welcome to the official documentation for TrustBridge — a decentralized, AI-powered microloan platform designed to bring financial access to underserved individuals, without relying on traditional credit scores.
+            </p>
+          </div>
+
+          <div className="space-y-24">
+            {sections.map((section, i) => (
+              <motion.section
+                key={i}
+                className="w-full max-w-4xl mx-auto"
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: i * 0.1 }}
+              >
+                <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-500 to-purple-700 bg-clip-text text-transparent">{section.title}</h2>
+                <div className="prose prose-lg prose-pink max-w-none text-gray-400 text-md space-y-3">
+                  {section.content}
+                </div>
+              </motion.section>
+            ))}
+          </div>
+        </main>
+      </div>
+      {/* Footer is outside the background overlays, so it is not blurred or covered */}
       <Footer />
-    </div>
+    </>
   );
 }
 
 // ⬇️ (Unchanged) Section content stays as-is
 const sections = [
   {
-    title: "🌈 What is ZenCue?",
+    title: "What is TrustBridge?",
     content: (
       <>
-        <p>ZenCue is your friendly digital buddy — helping you learn, play, and grow in your unique way!</p>
-        <p>Built for neurodivergent kids who think, feel, and learn differently.</p>
-        <p>Whether reading feels tough or sounds are too loud, ZenCue is here to help.</p>
+        <p>TrustBridge bridges the financial trust gap by enabling peer-to-peer microloans using alternative data. Users without formal credit histories can gain credibility by uploading everyday documents like utility bills, tax receipts, and rent slips. These documents are analysed using AI to generate a TrustScore, allowing borrowers to get funded transparently via Ethereum wallets.</p>
       </>
     ),
   },
   {
-    title: "🌟 Why ZenCue is Your Super Sidekick",
-    content: (
-      <ul className="list-disc pl-6">
-        <li>🧠 Built for ADHD, autism, dyslexia — and proud of it!</li>
-        <li>🔊 Reads aloud for easier comprehension</li>
-        <li>📖 Explains like a story using AI</li>
-        <li>💬 You can talk or type to it — like a friend</li>
-        <li>🎮 Brain games & puzzles in MindZone</li>
-        <li>🔐 Grown-up friendly payments via MetaMask & Coinbase</li>
-      </ul>
-    ),
-  },
-  {
-    title: "🧒 You're in Charge (But Never Alone)",
+    title: "Why TrustBridge?",
     content: (
       <>
-        <p>Use ZenCue by yourself or with a grown-up’s help — you’re in control.</p>
-        <p><strong>You are unique. You are bright. You are important.</strong></p>
-        <p>ZenCue is here to cheer you on, every single day. 💜</p>
+      <p>Millions remain unbanked or underbanked due to lack of credit history. TrustBridge empowers them by leveraging:</p>
+      <ul className="list-disc pl-6">
+        <li>AI-based document analysis (e.g., ITR, bills, rent)</li>
+        <li>Decentralized identity (Ethereum + Wagmi wallet)</li>
+        <li>Peer-to-peer lending transparency</li>
+        <li>TrustScore to ensure fairness & accountability</li>
+      </ul>
       </>
     ),
   },
   {
-    title: "✨ Key Features",
+    title: "Tech Stack Overview",
+    content: (
+      <>
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Frontend:</strong></p>
+        <ul className="list-disc pl-6"></ul>
+        <li>React (Vite)</li>
+        <li>Tailwind CSS</li>
+        <li>Wagmi + Viem – for Sepolia Ethereum wallet integration</li>
+
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Backend:</strong></p>
+        <ul className="list-disc pl-6"></ul>
+        <li>Flask (Python REST API)</li>
+        <li>Firebase (Authentication + Firestore DB)</li>
+        
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>AI Integration:</strong></p>
+        <ul className="list-disc pl-6"></ul>
+        <li>Gemini Vision – document text extraction (images, PDFs)</li>
+        <li>Gemini Pro– TrustScore generation based on extracted financial data</li>
+
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Blockchain (Web3):</strong></p>
+        <ul className="list-disc pl-6"></ul>
+        <li>Ethereum Sepolia Testnet – for demo payments</li>
+        <li>Wagmi library for wallet connection</li>
+        <li>No smart contracts in MVP — payments are simulated via frontend</li>
+
+
+        
+      </>
+    ),
+  },
+  {
+    title: "Key Features",
+    content: (
+        <>
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>TrustScore Generation</strong></p>
+        <ul className="list-disc pl-6"></ul>
+        <li>Upload income or bill documents (PDF/images)</li>
+        <li>AI extracts key details and computes a TrustScore (0–100)</li>
+        <li>Score improves with on-time repayments</li>
+
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Borrower Workflow</strong></p>
+        <ul className="list-disc pl-6"></ul>
+        <li>Sign up and upload KYC (mock Aadhar/PAN)</li>
+        <li>Get a TrustScore</li>
+        <li>Apply for loan: enter amount, reason, and wallet</li>
+        <li>Receive loan in your wallet (mock transaction)</li>
+        <li>If approved, receive funds via Sepolia wallet</li>
+        <li>Repay loan within 30 days; score increases if on-time</li>
+        
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Lender Workflow:</strong></p>
+        <ul className="list-disc pl-6"></ul>
+        <li>Register as lender and post loan offers (amount, interest)</li>
+        <li>Review loan requests from borrowers</li>
+        <li>View borrower's TrustScore and wallet</li>
+        <li>Approve or reject loan requests</li>
+        <li>If borrower defaults (2+ months), gets access to documents</li>
+        </>
+    ),
+  },
+  {
+    title: "Privacy & Security",
     content: (
       <ul className="list-disc pl-6">
-        <li>🔡 <strong>Smart Explain:</strong> Summarize, analyze, speak content</li>
-        <li>💬 <strong>Prompt Buddy:</strong> Chat/voice support</li>
-        <li>🧘‍♀️ <strong>MindZone:</strong> Interactive neurodivergent assessments</li>
-        <li>🏠 <strong>Home:</strong> Login, subscriptions, wallet integration</li>
-        <li>👤 <strong>Profile:</strong> Activity tracking, personalization</li>
+        <li>User data (KYC, loan info) is stored in Firestore — not on-chain</li>
+        <li>All AI parsing and scoring happens securely server-side</li>
+        <li>Borrower documents are only shared with lender after default</li>
       </ul>
     ),
   },
   {
-    title: "💳 Subscription Plans",
+    title: "User Journey",
     content: (
       <ul className="list-disc pl-6">
-        <li><b>Free:</b> 5 prompts/day, basic tools</li>
-        <li><b>Basic:</b> 40 prompts, 30 min audio-to-text</li>
-        <li><b>Pro:</b> 100 prompts, 90 min audio, visual aids</li>
-        <li><b>Premium:</b> Unlimited, full memory, support</li>
-        <li><b>Currency:</b> SepholiaETH for meaningful use (not real money)</li>
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Borrower:</strong></p>
+        <li>Register → Upload Docs → Get TrustScore → Apply for Loan → Connect Wallet → Receive ETH → Repay</li>
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Lender:</strong></p>
+        <li>Register → Post Offer → View Borrower Requests → Review TrustScore → Approve/Reject → Track Loan</li>
+      </ul>
+    ),
+  },
+  // Find and replace the API Routes section content with:
+{
+    title: "API Routes (Flask)",
+    content: (
+      <>
+      <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Document Parsing</strong></p>
+        <ul className="list-disc pl-6">
+        <li>POST /vision/first-trustscore</li>
+        <li>Uploads one or more financial docs → parses → scores</li>
+        </ul>
+
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Trust Score Update</strong></p>
+        <ul className="list-disc pl-6">
+        <li>POST /trustscore/update/${'{userId}'}</li>
+        <li>Increases score after successful loan repayment</li>
+        </ul>
+        
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Loan Routes:</strong></p>
+        <ul className="list-disc pl-6">
+        <li>POST /loan/request → Borrower requests a loan</li>
+        <li>GET /loan/user/${'{userId}'} → Get all borrower's loans</li>
+        <li>GET /loan/status/${'{userId}'}/${'{loanId}'} → Get loan repayment status</li>
+        <li>POST /loan/decision/${'{userId}'}/${'{loanId}'} → Lender approves/rejects loan</li>
+        </ul>
+        
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent"><strong>Lender Routes</strong></p>
+        <ul className="list-disc pl-6">
+        <li>POST /lender/register → Save lender profile in lenders/${'{userId}'}/info</li>
+        <li>POST /lender/offer → Lender posts offer in lenders/${'{userId}'}/offers</li>
+        <li>GET /lender/offers/${'{userId}'} → View own posted offers</li>
+        <li>GET /lender/borrowers → View all borrowers with pending loans</li>
+        </ul>
+        </>
+    ),
+},
+  {
+    title: "Testing & Deployment",
+    content: (
+      <>
+        <ul className="list-disc pl-6"></ul>
+        <li>Use SepoliaETH to get test ETH</li>
+        <li>Wallet connections handled by <b>Wagmi + Viem</b></li>
+        <li>Local testing supported using <b>Firebase Emulator Suite</b></li>
+        <li>Deployment:</li>
+        <ul className="list-disc pl-6"></ul>
+          <li>Frontend → Vercel</li>
+          <li>Backend → Render</li>
+      </>
+    ),
+  },
+  {
+    title: "Future Vision",
+    content: (
+      <ul className="list-disc pl-6">
+        <li>Add NFT-based identity badges</li>
+        <li>Use smart contracts for full loan escrow</li>
+        <li>Build an Android-first mobile app</li>
+        <li>Launch in real-world pilot communities (e.g., rural areas)</li>
       </ul>
     ),
   },
   {
-    title: "🧩 Support for Neurodivergent Kids",
+    title: "📬 Contact & Feedback",
     content: (
       <ul className="list-disc pl-6">
-        <li>🎨 Minimal, visually calm UI</li>
-        <li>🔊 Voice feedback + visual aid</li>
-        <li>🧘‍♂️ Reduces cognitive load with soft design</li>
-      </ul>
-    ),
-  },
-  {
-    title: "🧒 How to Use ZenCue (For Kids)",
-    content: (
-      <ul className="list-disc pl-6">
-        <li>🧠 Use Smart Explain for homework</li>
-        <li>🗣️ Talk or chat with Prompt Buddy</li>
-        <li>🧩 Play puzzles in MindZone</li>
-        <li>👤 Update your profile</li>
-      </ul>
-    ),
-  },
-  {
-    title: "👨‍👩‍👧 For Parents",
-    content: (
-      <ul className="list-disc pl-6">
-        <li>🔐 Help with signup & tools</li>
-        <li>🔒 Parent Lock (coming soon)</li>
-        <li>💬 Voice tools for non-readers</li>
-        <li>💳 Secure wallet-based payments</li>
-        <li>🧑‍🏫 Premium 1-on-1 support</li>
-      </ul>
-    ),
-  },
-  {
-    title: "🔒 Privacy & Safety",
-    content: (
-      <p>No personal data is collected. Everything stays private. Parents are encouraged to guide younger kids.</p>
-    ),
-  },
-  {
-    title: "🛠 Tech Stack",
-    content: (
-      <ul className="list-disc pl-6">
-        <li><b>Frontend:</b> React + Vite + Tailwind</li>
-        <li><b>Backend:</b> Flask</li>
-        <li><b>AI:</b> Groq APIs</li>
-        <li><b>Wallet:</b> OnchainKit</li>
-        <li><b>Auth:</b> Firebase</li>
-      </ul>
-    ),
-  },
-  {
-    title: "📬 Contact & Support",
-    content: (
-      <ul className="list-disc pl-6">
-        <li>Email: <a href="mailto:garnab559@gmail.com" className="text-blue-600 underline">garnab559@gmail.com</a></li>
-        <li>LinkedIn: <a href="https://www.linkedin.com/in/tulug559" target="_blank" className="text-blue-600 underline">tulug559</a></li>
-        <li>Twitter / Discord: Coming soon</li>
+        <p className="font-bold bg-gradient-to-r from-purple-500 to-blue-300 bg-clip-text text-transparent">For support or collaboration:</p>
+        <li>Email: <a href="mailto:trustbridge@project.org" className="text-blue-600 underline">trustbridge@project.org</a></li>
+        <li>Slack/Discord (coming soon)</li>
+        <li>GitHub:<a href="https://github.com/tulu-g559/TrustBridge" className="text-blue-700 underline">https://github.com/tulu-g559/TrustBridge</a></li>
       </ul>
     ),
   },

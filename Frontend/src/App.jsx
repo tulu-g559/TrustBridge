@@ -10,23 +10,21 @@ import PrivateRoute from "./components/shared/PrivateRoute";
 import Profile from "./pages/Profile"
 import TrustScore from "./pages/TrustScore";
 import Team from "./pages/members"
-import LenderPreferencesForm from "./pages/lender/LenderPreferencesForm";
-import LenderList from "./pages/borrower/LenderList";
 import DocPage from "./pages/documents";
 
 
 // Borrower Pages
 import BorrowerDashboard from "./pages/borrower/BorrowerDashboard";
+import LenderList from "./pages/borrower/LenderList";
 import LoanRequestForm from "./pages/borrower/LoanRequestForm";
-import MyLoans from "./pages/borrower/MyLoans";
 import RepayLoan from "./pages/borrower/RepayLoan";
+
 
 // Lender Pages
 import LenderDashboard from "./pages/lender/LenderDashboard";
-import LendForm from "./pages/lender/LendForm";
+import LenderPreferencesForm from "./pages/lender/LenderPreferencesForm";
 import LoanRequests from "./pages/lender/LoanRequests";
-import BorrowerList from "./pages/lender/BorrowerList";
-import RepaymentTracker from "./pages/lender/RepaymentTracker";
+import ActiveBorrowers from "./pages/lender/ActiveBorrowers"; 
 
 export default function App() {
   return (
@@ -36,7 +34,7 @@ export default function App() {
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
-        <Route path="/trustscore" element={<TrustScore />} />
+        
         <Route path="/team" element={<Team />} />
         <Route path="/documents" element={<DocPage />} />
         <Route
@@ -68,7 +66,7 @@ export default function App() {
         <Route element={<PrivateRoute requiredRole="borrower" />}>
           <Route path="/borrower/dashboard" element={<BorrowerDashboard />} />
           <Route path="/borrower/loan-request" element={<LoanRequestForm />} />
-          <Route path="/borrower/loans" element={<MyLoans />} />
+          <Route path="/trustscore" element={<TrustScore />} />
           <Route path="/borrower/repay" element={<RepayLoan />} />
           <Route path="/borrower/profile" element={<Profile />} />
         </Route>
@@ -76,12 +74,10 @@ export default function App() {
         {/* Lender Dashboard Routes */}
         <Route element={<PrivateRoute requiredRole="lender" />}>
           <Route path="/lender/dashboard" element={<LenderDashboard />} />
-          <Route path="/lender/lend" element={<LendForm />} />
           <Route path="/lender/requests" element={<LoanRequests />} />
-          <Route path="/lender/borrowers" element={<BorrowerList />} />
-          <Route path="/lender/repayments" element={<RepaymentTracker />} />
           <Route path="/lender/profile" element={<Profile />} />
           <Route path="/trustscore" element={<TrustScore />} />
+          <Route path="/lender/active-borrowers" element={<ActiveBorrowers />} />
         </Route>
 
         <Route path="/lender/preferences" element={<PrivateRoute requiredRole="lender" />}>

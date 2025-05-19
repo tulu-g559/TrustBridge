@@ -21,7 +21,7 @@ import { useAccount, useBalance, useChainId } from 'wagmi'
 
 // Sepolia Network Configuration
 const SEPOLIA_CHAIN_ID = 11155111
-const SEPOLIA_RPC_URL = "https://eth-sepolia.g.alchemy.com/v2/xaLLkN6DbiZVjrjKP3C3uaI3ULzEkraP" // Replace with your Alchemy API key
+const SEPOLIA_RPC_URL = import.meta.env.VITE_SEPOLIA_RPC_URL // Replace with your Alchemy API key
 
 const isSepoliaNetwork = (chainId) => chainId === SEPOLIA_CHAIN_ID
 
@@ -64,40 +64,82 @@ export default function LoanRequests() {
   }
 
   // Fetch loan requests
+  // useEffect(() => {
+  //   if (!user) return
+
+  //   const q = query(
+  //     collection(firestore, "loanRequests"),
+  //     where("lenderId", "==", user.uid)
+  //   )
+
+  //   const unsubscribe = onSnapshot(q, async (snapshot) => {
+  //     const fetchedRequests = await Promise.all(
+  //       snapshot.docs.map(async (docSnap) => {
+  //         const data = docSnap.data()
+  //         const borrowerId = data.borrowerId
+
+  //         try {
+  //           const borrowerDoc = await getDoc(doc(firestore, "users", borrowerId))
+  //           const borrowerData = borrowerDoc.data()
+  //           return { 
+  //             id: docSnap.id, 
+  //             ...data, 
+  //             borrowerName: borrowerData?.fullName || "Anonymous",
+  //             borrowerWallet: borrowerData?.walletAddress
+  //           }
+  //         } catch (error) {
+  //           console.error("Error fetching borrower details:", error)
+  //           return { 
+  //             id: docSnap.id, 
+  //             ...data, 
+  //             borrowerName: "Anonymous",
+  //             borrowerWallet: null
+  //           }
+  //         }
+  //       })
+  //     )
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
 
     const q = query(
-      collection(firestore, "loanRequests"),
-      where("lenderId", "==", user.uid)
-    )
+        collection(firestore, "loanRequests"),
+        where("lenderId", "==", user.uid)
+    );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const fetchedRequests = await Promise.all(
-        snapshot.docs.map(async (docSnap) => {
-          const data = docSnap.data()
-          const borrowerId = data.borrowerId
+        const fetchedRequests = await Promise.all(
+            snapshot.docs.map(async (docSnap) => {
+                const data = docSnap.data();
+                const borrowerId = data.borrowerId;
 
-          try {
-            const borrowerDoc = await getDoc(doc(firestore, "users", borrowerId))
-            const borrowerData = borrowerDoc.data()
-            return { 
-              id: docSnap.id, 
-              ...data, 
-              borrowerName: borrowerData?.fullName || "Anonymous",
-              borrowerWallet: borrowerData?.walletAddress
-            }
-          } catch (error) {
-            console.error("Error fetching borrower details:", error)
-            return { 
-              id: docSnap.id, 
-              ...data, 
-              borrowerName: "Anonymous",
-              borrowerWallet: null
-            }
-          }
-        })
-      )
+                try {
+                    const borrowerDoc = await getDoc(doc(firestore, "users", borrowerId));
+                    const borrowerData = borrowerDoc.data();
+                    
+                    // Get trust score from borrower data
+                    const trustScore = borrowerData?.trust_score?.current || "N/A";
+                    const lastUpdated = borrowerData?.trust_score?.updated_at;
+                    
+                    return { 
+                        id: docSnap.id, 
+                        ...data, 
+                        borrowerName: borrowerData?.fullName || "Anonymous",
+                        borrowerWallet: borrowerData?.walletAddress,
+                        trustScore,
+                        trustScoreUpdated: lastUpdated
+                    };
+                } catch (error) {
+                    console.error("Error fetching borrower details:", error);
+                    return { 
+                        id: docSnap.id, 
+                        ...data, 
+                        borrowerName: "Anonymous",
+                        borrowerWallet: null,
+                        trustScore: "N/A"
+                    };
+                }
+            })
+        );
 
       const sorted = fetchedRequests.sort((a, b) => {
         const statusOrder = { pending: 0, approved: 1, rejected: 2 }
@@ -287,10 +329,24 @@ export default function LoanRequests() {
                 <p className="text-sm text-gray-400 flex items-center gap-1">
                   <Timer className="w-4 h-4" />
                   Trust Score:{" "}
-                  <span className="text-green-400">
-                    {req.trustScore || "N/A"}
+                  <span className={`${
+                      req.trustScore === "N/A" 
+                          ? "text-gray-400" 
+                          : parseInt(req.trustScore) > 70 
+                              ? "text-green-400"
+                              : parseInt(req.trustScore) > 40 
+                                  ? "text-yellow-400" 
+                                  : "text-red-400"
+                  }`}>
+                      {req.trustScore}
+                      {req.trustScore !== "N/A" && "/100"}
                   </span>
-                </p>
+                  {req.trustScoreUpdated && (
+                      <span className="text-xs text-gray-500 ml-1">
+                          ({new Date(req.trustScoreUpdated.toDate()).toLocaleDateString()})
+                      </span>
+                  )}
+              </p>
                 <p className="text-sm mt-1">
                   Status:{" "}
                   <span

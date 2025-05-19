@@ -10,7 +10,7 @@ const DashboardWrapper = ({ children }) => {
       <div className="p-4">
         <Sidebar /> {/* Sidebar now behaves as a dropdown menu */}
       </div>
-      <main className="flex-1 p-6 overflow-y-auto bg-neutral-900">{children}</main>
+      <main className="min-h-screen  flex-1 p-6 overflow-y-auto bg-neutral-900">{children}</main>
       <Footer />
     </div>
   );

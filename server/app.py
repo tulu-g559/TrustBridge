@@ -128,6 +128,36 @@ def user_loans(uid):
         loan_list.append(loan_entry)
     return jsonify(loan_list), 200
 
+##----Fetch Trust Score----##
+@app.route("/user/trust-score/<uid>", methods=["GET"])
+def get_trust_score(uid):
+    try:
+        user_ref = db.collection("users").document(uid)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            return jsonify({
+                "error": "User not found"
+            }), 404
+            
+        user_data = user_doc.to_dict()
+        trust_score = user_data.get("trust_score", {
+            "current": 0,
+            "updated_at": None,
+            "history": []
+        })
+        
+        return jsonify({
+            "status": "success",
+            "trust_score": trust_score
+        }), 200
+        
+    except Exception as e:
+        print(f"Error fetching trust score: {str(e)}")
+        return jsonify({
+            "error": "Failed to fetch trust score",
+            "details": str(e)
+        }), 500
 
 ######## particular Loan Status 
 
@@ -280,12 +310,17 @@ def get_borrowers_for_lender():
 
 ##------ Upload Docs & get TrustScore-------##
 
-
-@app.route("/vision/first-trustscore", methods=["POST"])  
-
+@app.route("/vision/first-trustscore", methods=["POST"])
 def vision_upload():
     try:
-        files = request.files.getlist("document")
+        uid = request.form.get("uid")
+        if not uid:
+            return jsonify({"error": "User ID required"}), 400
+
+        if 'document' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+
+        files = request.files.getlist('document')
         if not files or len(files) == 0:
             return jsonify({"error": "No files uploaded"}), 400
 
@@ -300,12 +335,10 @@ def vision_upload():
             filename = secure_filename(file.filename)
             file_bytes = file.read()
 
-            image_parts = [
-                {
-                    "mime_type": file.mimetype,
-                    "data": base64.b64encode(file_bytes).decode("utf-8")
-                }
-            ]
+            image_parts = [{
+                "mime_type": file.mimetype,
+                "data": base64.b64encode(file_bytes).decode("utf-8")
+            }]
 
             vision_prompt = """
             Extract important financial or identity details from this document.
@@ -316,10 +349,8 @@ def vision_upload():
             - Identity verification (e.g., PAN, Aadhaar)
 
             Output the extracted data in clear plain text.
-
             If this is an invalid or irrelevant document (e.g., a photo, blank page, or unrelated file), return only: "Invalid document"
             """
-
 
             vision_response = model.generate_content(
                 contents=[{"parts": [{"text": vision_prompt}, {"inline_data": image_parts[0]}]}],
@@ -335,10 +366,7 @@ def vision_upload():
         if not extracted_results:
             return jsonify({"error": "No valid documents processed"}), 400
 
-        # Step 2: Combine extracted text for trust scoring
-        combined_history = "\n\n".join([res["extracted_text"] for res in extracted_results])
-
-        # Handle invalid or junk extracted content
+        # Check if all docs are invalid
         if all("Invalid document" in res["extracted_text"] or "No text extracted" in res["extracted_text"] for res in extracted_results):
             return jsonify({
                 "trust_score": 5,
@@ -346,32 +374,61 @@ def vision_upload():
                 "results": extracted_results
             }), 200
 
+        # Combine text for TrustScore
+        combined_history = "\n\n".join([res["extracted_text"] for res in extracted_results])
+
         trust_prompt = f"""
         You are evaluating a user's trustworthiness based on their submitted financial documents.
 
-        Instructions:
-        - If the user has provided **at least 3 valid financial documents** such as electricity bills, rent receipts, gas bills, or ITRs, then assign a trust score in the range **85 to 90**.
-        - If documents indicate mixed or limited financial reliability, assign a moderate score between 50 and 70.
-        - If the data is missing, inconsistent, or clearly invalid, assign a low score (e.g., 0 to 30).
+Scoring Criteria:
+High Trust Score (85-95)
+•	User has provided 3 or more valid financial documents from the following categories:
+o	Income Tax Returns (ITR)
+o	Electricity bills
+o	Gas bills
+o	Rent receipts
+o	Water bills
+o	Phone/Internet bills
+o	Bank statements
+o	Property tax receipts
+o	Insurance premium receipts
+•	Documents show consistent financial patterns
+•	No overdue payments or significant arrears
+•	Documents are recent (within last 12 months preferred)
+•	All documents contain proper identification details (name, address, dates)
+Moderate Trust Score (50-70)
+•	User has provided 1-2 valid financial documents
+•	Documents show mixed financial reliability (some late payments but generally stable)
+•	Minor inconsistencies in documentation
+•	Some documents may be older than 12 months
+•	Limited variety in document types
+Low Trust Score (0-30)
+•	Fewer than 3 documents provided OR documents are clearly invalid
+•	Significant inconsistencies in financial data
+•	Multiple overdue payments or defaults visible
+•	Documents are incomplete, illegible, or suspicious
+•	Missing critical information (names, dates, amounts)
+Additional Positive Indicators:
+•	No outstanding dues or overdue payments
+•	Consistent payment history across documents
+•	Regular income patterns (for ITR/salary documents)
+•	Utilities paid on time consistently
+•	Documents from verified/official sources
+Additional Negative Indicators:
+•	Frequent late payment notices
+•	Disconnection warnings
+•	Large outstanding balances
+•	Irregular income patterns
+•	Suspicious document formatting or information
 
-        Now, based on the following extracted user document data, provide:
-        1. A trust score between 0 and 100 (integer only)
-        2. A short explanation of why this score was assigned
-        3. Aslo take it as a good point, if there is no due payment in the uploaded docs
-
-        User document data:
-        {combined_history}
-
-        Response format:
-        Score: [number]
-        Explanation: [text]
+User document data: {combined_history}
+Response format: Score: [number] Explanation: [text]
         """
-
 
         trust_response = model.generate_content(trust_prompt, generation_config={"temperature": 0.0})
         text_response = trust_response.text if trust_response and trust_response.text else ""
 
-        # Extract score using regex
+        # Extract score
         score_match = re.search(r"Score:\s*(\d{1,3})", text_response, re.IGNORECASE)
         if not score_match:
             score = 5
@@ -381,19 +438,66 @@ def vision_upload():
             explanation_match = re.search(r"Explanation:\s*(.*)", text_response, re.IGNORECASE | re.DOTALL)
             explanation = explanation_match.group(1).strip() if explanation_match else "No explanation provided."
 
-        return jsonify({
-            "trust_score": score,
-            "explanation": explanation,
-            "results": extracted_results
-        }), 200
+        # ✅ Save score to Firestore under users/{uid}/trust_score
+        try:
+            user_ref = db.collection("users").document(uid)
+            
+            # Create the history entry first
+            history_entry = {
+                "score": score,
+                "reason": explanation,
+                "date": datetime.now(timezone.utc).isoformat() 
+            }
+
+            # Get current document to check if history exists
+            doc = user_ref.get()
+            current_data = doc.to_dict() if doc.exists else {}
+            
+            # Replace the section where you initialize the trust_score:
+
+            # Initialize history array if it doesn't exist
+            if not current_data.get('trust_score', {}).get('history'):
+                user_ref.set({
+                    'trust_score': {
+                        'current': score,  # Use the actual score instead of 0
+                        'updated_at': firestore.SERVER_TIMESTAMP,
+                        'history': [history_entry]  # Add initial history entry
+                    }
+                }, merge=True)
+            else:
+                # Append to existing history
+                user_ref.update({
+                    'trust_score.history': firestore.ArrayUnion([history_entry])
+                })
+
+            # Update current score and timestamp
+            user_ref.update({
+                'trust_score.current': score,
+                'trust_score.updated_at': firestore.SERVER_TIMESTAMP
+            })
+
+            return jsonify({
+                "trust_score": score,
+                "explanation": explanation,
+                "results": extracted_results,
+                "status": "success",
+                "message": "Trust score updated successfully"
+            }), 200
+
+        except Exception as db_error:
+            print(f"Firestore update error: {str(db_error)}")
+            return jsonify({
+                "error": "Failed to store trust score",
+                "details": str(db_error)
+            }), 500
 
     except Exception as e:
-        print(f"Document processing error: {str(e)}")
+        print(f"Processing error: {str(e)}")
         return jsonify({
-            "error": "Failed to process and score documents",
+            "error": "Failed to process documents",
             "details": str(e)
         }), 500
-
+    
 
 
 # ---- MAIN ----
