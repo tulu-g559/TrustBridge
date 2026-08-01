@@ -6,7 +6,7 @@
 
 
 **A decentralized, AI-powered microloan platform designed to bring financial access to underserved individuals—no traditional credit scores needed.**
-
+<br><br>
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind%20CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
