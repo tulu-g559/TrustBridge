@@ -1,8 +1,25 @@
-# 🌉 TrustBridge
+<div align="center">
 
-**TrustBridge** is a decentralized, AI-powered microloan platform designed to bring financial access to underserved individuals—no traditional credit scores needed.
+# TrustBridge
 
----
+<img alt="tlogofinal" src="https://github.com/user-attachments/assets/e9ac477d-be8d-454e-9c23-e8974561b142" height="120"/>
+
+
+**A decentralized, AI-powered microloan platform designed to bring financial access to underserved individuals—no traditional credit scores needed.**
+
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind%20CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Flask](https://img.shields.io/badge/Flask-3-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Gemini](https://img.shields.io/badge/Google_Gemini-AI-8E75B2?logo=google-gemini&logoColor=white)](https://ai.google.dev/)
+[![Ethereum](https://img.shields.io/badge/Ethereum-Sepolia-3C3C3D?logo=ethereum&logoColor=white)](https://ethereum.org/)
+[![Wagmi](https://img.shields.io/badge/Wagmi-Wallet-000000)](https://wagmi.sh/)
+[![Viem](https://img.shields.io/badge/Viem-Ethereum-5C6BC0)](https://viem.sh/)
+[![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?logo=vercel&logoColor=white)](https://vercel.com/)
+[![Render](https://img.shields.io/badge/Render-Backend-46E3B7?logo=render&logoColor=white)](https://render.com/)
+</div>
 
 ## 🚀 What is TrustBridge?
 
